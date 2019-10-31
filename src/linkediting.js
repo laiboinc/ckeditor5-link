@@ -8,6 +8,7 @@
  */
 
 import Plugin from '@ckeditor/ckeditor5-core/src/plugin';
+import Position from '@ckeditor/ckeditor5-engine/src/view/position';
 import LinkCommand from './linkcommand';
 import UnlinkCommand from './unlinkcommand';
 import { createLinkElement, ensureSafeUrl, getLocalizedDecorators, normalizeDecorators } from './utils';
@@ -51,6 +52,8 @@ export default class LinkEditing extends Plugin {
 
 		// Allow link attribute on all inline nodes.
 		editor.model.schema.extend( '$text', { allowAttributes: 'linkHref' } );
+		// Allow link attribute on image
+		editor.model.schema.extend( 'image', { allowAttributes: [ 'linkHref' ] } );
 
 		editor.conversion.for( 'dataDowncast' )
 			.attributeToElement( { model: 'linkHref', view: createLinkElement } );
@@ -59,6 +62,9 @@ export default class LinkEditing extends Plugin {
 			.attributeToElement( { model: 'linkHref', view: ( href, writer ) => {
 				return createLinkElement( ensureSafeUrl( href ), writer );
 			} } );
+
+		// for image link
+		editor.conversion.for( 'downcast' ).add( downcastImageLink() );
 
 		editor.conversion.for( 'upcast' )
 			.elementToAttribute( {
@@ -243,4 +249,26 @@ export default class LinkEditing extends Plugin {
 			}
 		} );
 	}
+}
+
+function downcastImageLink() {
+	return dispatcher  => {
+		dispatcher.on( 'attribute:linkHref:image', ( evt, data, conversionApi ) => {
+			const writer = conversionApi.writer;
+			const href = data.attributeNewValue;
+			// The image will be already converted - so it will be present in the view.
+			const viewImage = conversionApi.mapper.toViewElement( data.item );
+
+			// Below will wrap already converted image by newly created link element.
+
+			// 1. Create empty link element.
+			const linkElement = createLinkElement( ensureSafeUrl( href ), writer );
+
+			// 2. Insert link before associated image.
+			conversionApi.writer.insert( writer.createPositionBefore( viewImage ), linkElement );
+
+			// 3. Move whole converted image to a link.
+			conversionApi.writer.move( writer.createRangeOn( viewImage ), new Position( linkElement, 0 ) );
+		}, { priority: 'normal' } );
+	};
 }
