@@ -265,10 +265,10 @@ function downcastImageLink() {
 			const linkElement = createLinkElement( ensureSafeUrl( href ), writer );
 
 			// 2. Insert link before associated image.
-			conversionApi.writer.insert( writer.createPositionBefore( viewImage ), linkElement );
+			writer.insert( writer.createPositionBefore( viewImage ), linkElement );
 
 			// 3. Move whole converted image to a link.
-			conversionApi.writer.move( writer.createRangeOn( viewImage ), new Position( linkElement, 0 ) );
+			writer.move( writer.createRangeOn( viewImage ), new Position( linkElement, 0 ) );
 		}, { priority: 'normal' } );
 	};
 }
